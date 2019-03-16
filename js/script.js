@@ -1,4 +1,4 @@
-let preQuestions =
+/*let preQuestions =
     [
         {
             "category": "Entertainment: Music",
@@ -170,6 +170,16 @@ let preQuestions =
                 "Video Card"
             ]
         }];
+*/
+
+let preQuestions = [{
+    "category": String,
+    "type": String,
+    "difficulty": String,
+    "question": String,
+    "correct_answer": String,
+    "answers": [String]
+}];
 
 let next = document.querySelector('.next');
 let previous = document.querySelector('.previous');
@@ -191,16 +201,12 @@ for (let i = 0; i < answers.length; i++) {
     answers[i].addEventListener('click', doAction);
 }
 
-setQuestion(0);
-
 function doAction(event) {
-    //event.target - Zwraca referencję do elementu, do którego zdarzenie zostało pierwotnie wysłane.
     if (event.target.innerHTML === preQuestions[index].correct_answer) {
         points++;
         pointsElem.innerText = points;
         markCorrect(event.target);
-    }
-    else {
+    } else {
         markInCorrect(event.target);
     }
     disableAnswers();
@@ -211,6 +217,7 @@ function activateAnswers() {
         answers[i].addEventListener('click', doAction);
     }
 }
+
 activateAnswers();
 
 function disableAnswers() {
@@ -229,27 +236,13 @@ function markInCorrect(elem) {
 
 function clearClass() {
     for (let i = 0; i < answers.length; i++) {
-        answers[i].classList.remove('incorrect');
-        answers[i].classList.remove('correct');
+        answers[i].classList.remove('correct','incorrect');
     }
 }
 
-restart.addEventListener('click', function (event) {
-    event.preventDefault();
-
-    index = 0;
-    points = 0;
-    let userScorePoint = document.querySelector('.score');
-    userScorePoint.innerHTML = points;
-    setQuestion(index);
-    activateAnswers();
-    list.style.display = 'block';
-    results.style.display = 'none';
-});
-
 function setQuestion(index) {
     clearClass();
-    question.innerHTML = "<span>" + (index+1) + ".</span> " + preQuestions[index].question;
+    question.innerHTML = (index + 1) + ". " + preQuestions[index].question;
 
     answers[0].innerHTML = preQuestions[index].answers[0];
     answers[1].innerHTML = preQuestions[index].answers[1];
@@ -265,25 +258,57 @@ function setQuestion(index) {
     }
 }
 
-next.addEventListener('click', function () {
-    index++;
-    if (index >= preQuestions.length) {
-        list.style.display = 'none';
-        results.style.display = 'block';
-        userScorePoint.innerHTML = points;
-        let previousScore = JSON.parse(localStorage.getItem("score"));
-        let averagePoints = (previousScore + points) /2;
-        average.innerHTML = averagePoints;
-        localStorage.setItem("score", JSON.stringify(averagePoints));
-    } else {
-        setQuestion(index);
-        activateAnswers();
-    }
-});
+fetch('https://quiztai.herokuapp.com/api/quiz')
+    .then(resp => resp.json())
+    .then(resp => {
+        preQuestions = resp;
+        setQuestion(0);
 
-previous.addEventListener('click', function () {
-    if (index > 0) { index--; }
-    setQuestion(index);
-    activateAnswers();
-});
+        next.addEventListener('click', function () {
+            index++;
+            if (index >= preQuestions.length) {
+                list.style.display = 'none';
+                results.style.display = 'block';
+                userScorePoint.innerHTML = points;
+                let averagePoints = JSON.parse(localStorage.getItem("averagePoints"));
+                if (averagePoints == null) {
+                    averagePoints = 0;
+                }
+                let numberOfGames = JSON.parse(localStorage.getItem("numberOfGames"));
+                if (numberOfGames == null) {
+                    numberOfGames = 0;
+                }
+                averagePoints = (points + (averagePoints * numberOfGames)) / (numberOfGames + 1);
+                average.innerHTML = averagePoints;
+                localStorage.setItem("averagePoints", JSON.stringify(averagePoints));
+                localStorage.setItem("numberOfGames", JSON.stringify(numberOfGames + 1));
+            } else {
+                setQuestion(index);
+                activateAnswers();
+            }
+        });
+
+        previous.addEventListener('click', function () {
+            if (index > 0) {
+                index--;
+            }
+            setQuestion(index);
+            activateAnswers();
+        });
+
+        restart.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            index = 0;
+            points = 0;
+            let userScorePoint = document.querySelector('.score');
+            userScorePoint.innerHTML = points;
+            setQuestion(index);
+            activateAnswers();
+            list.style.display = 'block';
+            results.style.display = 'none';
+        });
+    });
+
+
 
